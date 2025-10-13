@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.10)
 
-# Назва проекту та мова
+# РќР°Р·РІР° РїСЂРѕРµРєС‚Сѓ С‚Р° РјРѕРІР°
 project(MyProject LANGUAGES CXX)
 
-# Встановити стандарт C++
+# Р’СЃС‚Р°РЅРѕРІРёС‚Рё СЃС‚Р°РЅРґР°СЂС‚ C++
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Додати головний вихідний файл
+# Р”РѕРґР°С‚Рё РіРѕР»РѕРІРЅРёР№ РІРёС…С–РґРЅРёР№ С„Р°Р№Р»
 add_executable(${PROJECT_NAME} main.cpp)
