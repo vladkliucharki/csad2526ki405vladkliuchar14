@@ -5,22 +5,22 @@ project(MyProject LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Додаємо головний виконуваний файл
+# Р”РѕРґР°С”РјРѕ РіРѕР»РѕРІРЅРёР№ РІРёРєРѕРЅСѓРІР°РЅРёР№ С„Р°Р№Р»
 add_executable(${PROJECT_NAME} main.cpp math_operations.cpp)
 
-# GoogleTest: автоматичне завантаження та підключення
+# GoogleTest: Р°РІС‚РѕРјР°С‚РёС‡РЅРµ Р·Р°РІР°РЅС‚Р°Р¶РµРЅРЅСЏ С‚Р° РїС–РґРєР»СЋС‡РµРЅРЅСЏ
 include(FetchContent)
 FetchContent_Declare(
     googletest
     URL https://github.com/google/googletest/archive/refs/heads/main.zip
 )
-# Для Windows: вимкнути встановлення тестів GoogleTest
+# Р”Р»СЏ Windows: РІРёРјРєРЅСѓС‚Рё РІСЃС‚Р°РЅРѕРІР»РµРЅРЅСЏ С‚РµСЃС‚С–РІ GoogleTest
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
 enable_testing()
 
-# Додаємо тестовий виконуваний файл
+# Р”РѕРґР°С”РјРѕ С‚РµСЃС‚РѕРІРёР№ РІРёРєРѕРЅСѓРІР°РЅРёР№ С„Р°Р№Р»
 add_executable(unit_tests
     tests/unit_tests.cpp
     math_operations.cpp
