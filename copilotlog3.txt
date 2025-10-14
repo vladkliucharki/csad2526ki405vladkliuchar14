@@ -1,0 +1,142 @@
+Write an implementation for int add(int a, int b); which will be used for unit tests.
+
+Here is the standard implementation of the add function for math_operations.cpp:
+
+C++
+
+int add(int a, int b) {
+    return a + b;
+}
+Explanation:
+The function simply returns the sum of two integers. This implementation works correctly for unit tests because it has no side effects and always returns the expected result.
+
+Now, implement the tests for this by writing them into a file named unit_tests.cpp. It's best to use Google Test as the framework.
+
+Here is an example of unit tests for the add function in the unit_tests.cpp file using Google Test:
+
+C++
+
+#include <gtest/gtest.h>
+#include "../math_operations.h"
+
+TEST(AddFunctionTests, PositiveNumbers) {
+    EXPECT_EQ(add(1, 2), 3);
+    EXPECT_EQ(add(100, 200), 300);
+}
+
+TEST(AddFunctionTests, NegativeNumbers) {
+    EXPECT_EQ(add(-1, -2), -3);
+    EXPECT_EQ(add(-100, -200), -300);
+}
+
+TEST(AddFunctionTests, MixedSignNumbers) {
+    EXPECT_EQ(add(-1, 2), 1);
+    EXPECT_EQ(add(1, -2), -1);
+}
+
+TEST(AddFunctionTests, Zero) {
+    EXPECT_EQ(add(0, 0), 0);
+    EXPECT_EQ(add(0, 5), 5);
+    EXPECT_EQ(add(5, 0), 5);
+}
+What was done:
+
+Included Google Test and math_operations.h.
+
+Added four test suites for different use cases of the add function.
+
+Note:
+To run the tests, you need to set up Google Test in your CMakeLists.txt. If you need help integrating Google Test with CMake, let me know.
+
+Yes, please configure CMake for the corresponding integration.
+
+Here is how to integrate Google Test into your CMakeLists.txt for a project with Ninja and C++17:
+
+CMake
+
+cmake_minimum_required(VERSION 3.10)
+
+project(MyProject LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Add the main executable
+add_executable(${PROJECT_NAME} main.cpp math_operations.cpp)
+
+# GoogleTest: automatic download and linking
+include(FetchContent)
+FetchContent_Declare(
+    googletest
+    URL https://github.com/google/googletest/archive/refs/heads/main.zip
+)
+# For Windows: disable installing GoogleTest tests
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googletest)
+
+enable_testing()
+
+# Add the test executable
+add_executable(unit_tests
+    tests/unit_tests.cpp
+    math_operations.cpp
+)
+
+target_link_libraries(unit_tests
+    gtest_main
+)
+
+include(GoogleTest)
+gtest_discover_tests(unit_tests)
+What was done:
+
+Google Test is added via FetchContent (automatic download).
+
+A test executable unit_tests is created.
+
+math_operations.cpp is added to the tests to link the implementation.
+
+The gtest_main library is linked.
+
+Automatic test discovery is enabled.
+
+Now you can run the tests via CTest or from Visual Studio.
+
+What commands do I need to enter to run the tests for unit_tests.cpp?
+
+To run the tests for unit_tests.cpp in your project with CMake and Ninja, execute the following commands in the terminal from the root of your project:
+
+Create a build directory (if it doesn't already exist):
+
+Bash
+
+mkdir build
+Run CMake with the Ninja generator:
+
+Bash
+
+cmake -S . -B build -G Ninja
+Compile the project:
+
+Bash
+
+ninja -C build
+Run the tests:
+
+Bash
+
+ctest --test-dir build
+Explanation:
+
+cmake -S . -B build -G Ninja — configures the project for Ninja.
+
+ninja -C build — compiles all targets, including unit_tests.
+
+ctest --test-dir build — runs all tests found by CMake.
+
+
+
+
+
+
+
