@@ -1,0 +1,79 @@
+# Name of the workflow, which will be displayed in the "Actions" tab on GitHub
+name: CI/CD Cross-Platform Build
+
+# --- Trigger: Conditions for starting the workflow ---
+# This block defines when the workflow will be automatically triggered.
+on:
+  # Trigger on a push to branches named 'master' or 'develop'
+  push:
+    branches: [ master, develop ]
+  
+  # Trigger on creation or update of a Pull Request targeting 'master' or 'develop'
+  pull_request:
+    branches: [ master, develop ]
+
+# --- Jobs: Tasks to be executed ---
+jobs:
+  # The name of the single job, as required
+  cross_build:
+    
+    # --- Strategy & Matrix: Strategy for parallel execution ---
+    # This block allows running the same job on different configurations.
+    strategy:
+      matrix:
+        # We define a variable 'os' which will sequentially take each of these values.
+        # The 'cross_build' job will run 3 times in parallel, one for each OS.
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    # Specify on which operating system (runner) to execute the job.
+    # ${{ matrix.os }} is a dynamic reference to the value from the list above.
+    runs-on: ${{ matrix.os }}
+
+    # --- Steps: Step-by-step instructions ---
+    # The steps are executed sequentially for each job in the matrix.
+    steps:
+      # Step 1: Check out the code from the repository
+      # Use the ready-made action 'actions/checkout' version 4.
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step 2: Run configuration, build, and tests
+      # Here we execute the scripts created in the previous stage.
+      # The 'if' condition allows running the correct script for each OS.
+      - name: Build and Test
+        run: |
+          # For Linux and macOS (all non-Windows systems)
+          if [ "${{ runner.os }}" != "Windows" ]; then
+            chmod +x ci.sh
+            ./ci.sh
+          # For Windows
+          else
+            ./ci.bat
+          fi
+        shell: bash
+
+      # Step 3: Create artifacts
+      # This step uploads the build result (the executable file) as an artifact.
+      # Artifacts can be downloaded from the workflow run page.
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          # The artifact name will be unique for each OS, e.g., 'hello-windows-latest'
+          name: hello-${{ runner.os }}
+          # The path to the file that needs to be uploaded.
+          # Note: the path may need adjustment depending on your CMake configuration
+          # (e.g., 'build/Release/hello.exe' for a release build on Windows).
+          path: |
+            build/hello
+            build/Debug/hello.exe
+            build/Release/hello.exe
+          if-no-files-found: warn # Don't fail the job if no files are found
+
+      # Step 4: Deploy
+      # This is an EXAMPLE step. Real deployment requires configuring secrets and scripts.
+      # This step runs ONLY on a push to the 'master' branch.
+      - name: Deploy (Placeholder)
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+        run: |
+          echo "Deploying artifact for ${{ runner.os }}..."
+          echo "This is a placeholder. Real deployment script goes here."
