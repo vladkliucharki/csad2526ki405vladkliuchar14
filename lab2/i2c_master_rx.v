@@ -20,7 +20,7 @@ module i2c_master_rx (
     output wire          busy,       // '1' - transaction in progress
     output wire          ack_error,  // '1' - if NACK is received (error)
     output wire [7:0]    data_out,   // 8-bit received data byte
-    output wire          data_ready  // '1' - pulse, data_out is valid
+    output wire          data_ready,  // '1' - pulse, data_out is valid
 
     // --- I2C Bus Ports ---
     inout wire           sda,        // Bidirectional I2C data line
