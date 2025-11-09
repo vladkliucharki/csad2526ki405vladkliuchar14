@@ -1,0 +1,246 @@
+/*
+ * Модуль: i2c_master_tx (I2C Master Transmitter / Кодер)
+ * Мова: Verilog
+ * Завдання: 14
+ *
+ * Призначення: 
+ * Реалізує логіку I2C Master для передачі одного байта даних (Write).
+ * Генерує тактові імпульси (SCL) та керує потоком даних (SDA).
+ */
+module i2c_master_tx (
+    // --- Системні порти ---
+    input wire           clk,        // Системний тактовий сигнал (напр. 50 МГц)
+    input wire           rst_n,      // Асинхронний активний-низький скид
+
+    // --- Порти керування від користувача ---
+    input wire           start_tx,   // Імпульс для початку транзакції
+    input wire [6:0]     slave_addr, // 7-бітна адреса Slave-пристрою
+    input wire [7:0]     data_in,    // 8-бітний байт даних для передачі
+
+    // --- Порти стану ---
+    output wire          busy,       // '1' - транзакція в процесі, '0' - готовий
+    output wire          ack_error,  // '1' - якщо отримано NACK (помилка)
+
+    // --- Порти шини I2C ---
+    inout wire           sda,        // Двонаправлена лінія даних I2C
+    output wire          scl         // Лінія тактування I2C (генерується майстром)
+);
+
+    // =========================================================================
+    // --- Параметри дільника тактової частоти ---
+    // =========================================================================
+    // Встановіть вашу системну тактову частоту
+    parameter CLK_FREQ = 50_000_000;  // Приклад: 50 МГц
+    // Бажана частота SCL (100 кГц для Standard Mode)
+    parameter I2C_FREQ = 100_000;
+    
+    // Розрахунок дільника для отримання *половини* періоду SCL.
+    // FSM (машина станів) буде працювати на "тіках" з частотою 2x I2C_FREQ.
+    localparam HALF_PERIOD_COUNT = (CLK_FREQ / (I2C_FREQ * 2)) - 1;
+
+    // =========================================================================
+    // --- Внутрішні регістри та сигнали ---
+    // =========================================================================
+    
+    // --- Дільник тактової частоти ---
+    reg [$clog2(HALF_PERIOD_COUNT):0] clk_div_cnt; // Лічильник дільника
+    reg tick;                                      // Вихідний "тік" для FSM
+
+    // --- Регістри FSM (Finite State Machine) ---
+    reg [4:0] state;       // Регістр поточного стану FSM
+    reg busy_reg;          // Внутрішній регістр 'busy'
+    reg ack_error_reg;     // Внутрішній регістр 'ack_error'
+    
+    // --- Регістри керування шиною ---
+    reg scl_reg;           // Регістр для керування виходом scl
+    reg sda_o_reg;         // Регістр *значення* для виходу sda
+    reg sda_en_reg;        // Регістр *ввімкнення* виходу sda ('1' = вихід, '0' = вхід/Hi-Z)
+
+    // --- Регістри даних ---
+    reg [7:0] shift_reg;   // Зсувний регістр (для адреси + R/W біта, та даних)
+    reg [2:0] bit_cnt;     // Лічильник бітів (0-7)
+    reg       sending_addr;  // '1' - передаємо адресу, '0' - передаємо дані
+
+    // --- Стани FSM ---
+    localparam S_IDLE             = 5'd0;  // Очікування
+    localparam S_START_1          = 5'd1;  // Генерація START: SDA=0 (SCL=1)
+    localparam S_START_2          = 5'd2;  // Генерація START: SCL=0
+    localparam S_TX_BIT           = 5'd3;  // Виставлення біта на SDA (SCL=0)
+    localparam S_TX_CLK_HI        = 5'd4;  // SCL=1 (Slave читає біт)
+    localparam S_TX_CLK_LO        = 5'd5;  // SCL=0 (Завершення передачі біта)
+    localparam S_GET_ACK_1        = 5'd6;  // Звільнення SDA (для ACK)
+    localparam S_GET_ACK_CLK_HI   = 5'd7;  // SCL=1 (для ACK)
+    localparam S_GET_ACK_READ     = 5'd8;  // Читання ACK/NACK з SDA
+    localparam S_GET_ACK_CLK_LO   = 5'd9;  // SCL=0 (для ACK)
+    localparam S_STOP_1           = 5'd10; // Генерація STOP: SDA=0 (SCL=0)
+    localparam S_STOP_CLK_HI      = 5'd11; // Генерація STOP: SCL=1
+    localparam S_STOP_2           = 5'd12; // Генерація STOP: SDA=1 (SCL=1)
+
+    // =========================================================================
+    // --- Призначення виходів ---
+    // =========================================================================
+    
+    // Керування SCL: просто виводимо значення з регістра
+    assign scl = scl_reg;
+    
+    // Керування SDA: тристановий буфер.
+    // sda_en_reg = 1 -> Master керує лінією (виводить sda_o_reg).
+    // sda_en_reg = 0 -> Master "відпускає" лінію (Hi-Z), щоб Slave міг надіслати ACK.
+    assign sda = (sda_en_reg) ? sda_o_reg : 1'bz;
+
+    assign busy = busy_reg;
+    assign ack_error = ack_error_reg;
+
+    // =========================================================================
+    // --- Логіка дільника тактової частоти ---
+    // =========================================================================
+    // Генерує 'tick' кожні HALF_PERIOD_COUNT циклів 'clk'.
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            clk_div_cnt <= 0;
+            tick <= 1'b0;
+        end else begin
+            if (clk_div_cnt == HALF_PERIOD_COUNT) begin
+                clk_div_cnt <= 0;
+                tick <= 1'b1;
+            end else begin
+                clk_div_cnt <= clk_div_cnt + 1;
+                tick <= 1'b0;
+            end
+        end
+    end
+
+    // =========================================================================
+    // --- Логіка FSM (Машина Станів) ---
+    // =========================================================================
+    // Вся логіка Мастера реалізована тут.
+    // Змінює стани лише по 'tick'.
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            // Скидання в початковий стан
+            state <= S_IDLE;
+            scl_reg <= 1'b1;       // SCL "відпущено" (high)
+            sda_o_reg <= 1'b1;     // SDA "відпущено" (high)
+            sda_en_reg <= 1'b1;    // Керуємо лінією
+            busy_reg <= 1'b0;
+            ack_error_reg <= 1'b0;
+            bit_cnt <= 0;
+            shift_reg <= 0;
+            sending_addr <= 1'b0;
+            
+        end else if (tick) begin // Працюємо тільки по "тіку" від дільника
+            
+            case (state)
+                
+                // --- Стан Очікування ---
+                S_IDLE: begin
+                    busy_reg <= 1'b0;
+                    ack_error_reg <= 1'b0;
+                    scl_reg <= 1'b1;
+                    sda_o_reg <= 1'b1;
+                    sda_en_reg <= 1'b1; 
+                    
+                    if (start_tx) begin
+                        busy_reg <= 1'b1;
+                        sending_addr <= 1'b1; // Починаємо з передачі адреси
+                        state <= S_START_1;
+                    end
+                end
+
+                // --- Умова START ---
+                S_START_1: begin
+                    sda_o_reg <= 1'b0; // SCL=1, опускаємо SDA=0
+                    state <= S_START_2;
+                end
+                
+                S_START_2: begin
+                    scl_reg <= 1'b0; // Опускаємо SCL=0. Умова START згенерована.
+                    // Завантажуємо адресу і біт R/W=0 (Write)
+                    shift_reg <= {slave_addr, 1'b0}; 
+                    bit_cnt <= 3'd7; // Будемо передавати 8 біт
+                    state <= S_TX_BIT;
+                end
+
+                // --- Передача Біта ---
+                S_TX_BIT: begin
+                    sda_o_reg <= shift_reg[7]; // Виставляємо старший біт на SDA
+                    state <= S_TX_CLK_HI;
+                end
+                
+                S_TX_CLK_HI: begin
+                    scl_reg <= 1'b1; // Піднімаємо SCL=1. Slave читає біт.
+                    state <= S_TX_CLK_LO;
+                end
+                
+                S_TX_CLK_LO: begin
+                    scl_reg <= 1'b0; // Опускаємо SCL=0.
+                    if (bit_cnt == 0) begin
+                        state <= S_GET_ACK_1; // 8 біт передано, чекаємо ACK
+                    end else begin
+                        shift_reg <= shift_reg << 1; // Зсуваємо регістр
+                        bit_cnt <= bit_cnt - 1;
+                        state <= S_TX_BIT; // Наступний біт
+                    end
+                end
+
+                // --- Отримання ACK/NACK ---
+                S_GET_ACK_1: begin
+                    sda_en_reg <= 1'b0; // "Відпускаємо" SDA
+                    state <= S_GET_ACK_CLK_HI;
+                end
+                
+                S_GET_ACK_CLK_HI: begin
+                    scl_reg <= 1'b1; // Тактуємо SCL=1 для ACK
+                    state <= S_GET_ACK_READ;
+                end
+                
+                S_GET_ACK_READ: begin
+                    if (sda == 1'b1) begin // '1' == NACK (помилка)
+                        ack_error_reg <= 1'b1;
+                    end
+                    state <= S_GET_ACK_CLK_LO;
+                end
+
+                S_GET_ACK_CLK_LO: begin
+                    scl_reg <= 1'b0; // Опускаємо SCL=0
+                    sda_en_reg <= 1'b1; // Повертаємо контроль над SDA
+                    
+                    if (ack_error_reg) begin
+                        state <= S_STOP_1; // Отримали NACK, зупинка
+                    end else if (sending_addr) begin
+                        // Отримали ACK після адреси, тепер передаємо дані
+                        sending_addr <= 1'b0;
+                        shift_reg <= data_in; // Завантажуємо дані
+                        bit_cnt <= 3'd7;
+                        state <= S_TX_BIT;
+                    end else begin
+                        // Отримали ACK після даних, завершуємо
+                        state <= S_STOP_1;
+                    end
+                end
+
+                // --- Умова STOP ---
+                S_STOP_1: begin
+                    sda_o_reg <= 1'b0; // SCL=0, SDA=0
+                    state <= S_STOP_CLK_HI;
+                end
+
+                S_STOP_CLK_HI: begin
+                    scl_reg <= 1'b1; // SCL=1
+                    state <= S_STOP_2;
+                end
+                
+                S_STOP_2: begin
+                    sda_o_reg <= 1'b1; // SCL=1, SDA=1 -> STOP
+                    state <= S_IDLE; // Повертаємось в очікування
+                end
+                
+                default: begin
+                    state <= S_IDLE;
+                end
+                
+            endcase
+        end
+    end
+
+endmodule
