@@ -1,0 +1,73 @@
+m255
+K4
+z2
+13
+!s112 1.1
+!i10d 8192
+!i10e 25
+!i10f 100
+cModel Technology
+Z0 dD:/Verilog/csad2526ki405vladkliuchar14/lab2
+vi2c_master
+!s110 1762785063
+!i10b 1
+!s100 dmW6[VZ82]L581SmOG6ej2
+ISeFXlQ4LeLfSJQWOND97K1
+Z1 VDg1SIo80bB@j0V0VzS_@n1
+R0
+w1762785061
+8D:/Verilog/csad2526ki405vladkliuchar14/lab2/i2c_master.v
+FD:/Verilog/csad2526ki405vladkliuchar14/lab2/i2c_master.v
+L0 4
+Z2 OV;L;10.5b;63
+r1
+!s85 0
+31
+!s108 1762785062.000000
+!s107 D:/Verilog/csad2526ki405vladkliuchar14/lab2/i2c_master.v|
+!s90 -reportprogress|300|-work|work|D:/Verilog/csad2526ki405vladkliuchar14/lab2/i2c_master.v|
+!i113 1
+Z3 o-work work
+Z4 tCvgOpt 0
+vi2c_master_tb
+!s110 1762785069
+!i10b 1
+!s100 OJCCXkK>?4=ne<3F>;jFa2
+IEdo>AYU<5:g4=lW2Ii7in1
+R1
+R0
+w1762785043
+8D:/Verilog/csad2526ki405vladkliuchar14/lab2/i2c_master_tb.v
+FD:/Verilog/csad2526ki405vladkliuchar14/lab2/i2c_master_tb.v
+L0 4
+R2
+r1
+!s85 0
+31
+!s108 1762785069.000000
+!s107 D:/Verilog/csad2526ki405vladkliuchar14/lab2/i2c_master_tb.v|
+!s90 -reportprogress|300|-work|work|D:/Verilog/csad2526ki405vladkliuchar14/lab2/i2c_master_tb.v|
+!i113 1
+R3
+R4
+vi2c_tx_rx
+!s110 1762784791
+!i10b 1
+!s100 3=CR]SXhE3RKI?glGKf_D1
+I=GgKdmPe`K0RIW2l9lam72
+R1
+R0
+w1762784782
+8D:/Verilog/csad2526ki405vladkliuchar14/lab2/i2c_tx_rx.v
+FD:/Verilog/csad2526ki405vladkliuchar14/lab2/i2c_tx_rx.v
+L0 3
+R2
+r1
+!s85 0
+31
+!s108 1762784791.000000
+!s107 D:/Verilog/csad2526ki405vladkliuchar14/lab2/i2c_tx_rx.v|
+!s90 -reportprogress|300|-work|work|D:/Verilog/csad2526ki405vladkliuchar14/lab2/i2c_tx_rx.v|
+!i113 1
+R3
+R4
